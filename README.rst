@@ -1,5 +1,12 @@
+AWS ML Helper
+=============
+
+AWS ML Helper is a command line tool that enables easy setup and spot instance
+manipulation on AWS for Machine Learning.
+
+
 Setup
-=====
+-----
 
 Install `aws-ml-helper`, configure it and create a VPC::
 

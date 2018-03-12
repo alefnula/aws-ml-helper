@@ -1,4 +1,13 @@
 *.py[cod]
+.DS_Store
+.cache
+.coverage
+.pytest_cache
 .idea
 .vscode
-*.egg-info
+docs/_build
+build
+dist
+VERSION
+aws_ml_helper.egg-info
+

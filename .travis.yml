@@ -1,0 +1,22 @@
+language: python
+
+python:
+  - 3.6
+
+install:
+  - pip install -r requirements-dev.txt
+
+script:
+  - py.test --pep8 aws_ml_helper --cov aws_ml_helper
+  - flake8 aws_ml_helper
+
+deploy:
+  provider: pypi
+  user: alefnula
+  password:
+    secure: m6jyXK6JAOFELXl34VHblhald57X+JOkmmXhvHJk87Cy/gm/iLwGlpu55zarL4araMAgUjM8xuTicRgiGKllMFrQPRUkRC/4ack+gTeybziRihPIDvot69Xbj2wdf10zy/CHh5sm1lYZgULO9pQkXlXC8Awyu/qaBMEb68kfxjTKb4g8uXCN1OvlSl0yWrypldQv/IoNtgXVSDUJaP32+ArLMOamvkcWhOiQweD3vZpZ1kS60FtkfSUu5qnZuITe6rvCyc+yTZOayXin9VRtWPkagsj/ulmJhR0WiQwSEcy6xX9d3jFwFZS6D77n9qyF5N/JhGT3oi17iK+dTkOlsPkuQYNUr2WNbrFAHIVEJV842ucM2R9y6Nn6nHGE9epigAbNHVIVTPDuNI2AAAFGqHoGiesaPsYlkh+URy7KVjQl0g8hSyvsz9biBW/z+I1Y5gMIsSI0TP2ppZ9X2tUO4wepnokTNC308eJ9j4maPFkYg0gn4m8xU/UH3osrYrBdzjZcfU0U2oH5z6XYw3vGfmVqZmJj6hPijrBZfP1djGK7qkjw6KJqLyjYJZrQCdeRtfVG6S8U9lVLyMIRhVn3JKBFZCMHiHyymNWP/GF8iGUZ9OLJYtPXii8gHE7IW1hBd+CIypatp00UFiOFcu5ZRo5OQtfGUgpnJ4NCb3xpzYM=
+  on:
+    tags: true
+    branch: master
+    distributions: sdist bdist_wheel
+    repo: alefnula/aws-ml-helper
