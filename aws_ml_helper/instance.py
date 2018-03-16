@@ -3,6 +3,7 @@ __date__ = '20 October 2010'
 __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 
 import os
+import time
 import click
 import paramiko
 from aws_ml_helper import boto
@@ -149,8 +150,10 @@ def login(config, name):
     """
     instance = get_instnace(config, name)
     if instance is not None:
-        os.system(f'ssh -i "{config.access_key}" '
-                  f'"{config.ami_username}@{instance.public_ip_address}"')
+        os.system(
+            f'ssh -o "StrictHostKeyChecking no" -i "{config.access_key}" '
+            f'"{config.ami_username}@{instance.public_ip_address}"'
+        )
 
 
 def run(config, name, command):
@@ -215,3 +218,22 @@ def cp(config, source, destination):
                 sftp.put(source, destination)
     else:
         click.secho('Both paths are local paths', fg='red')
+
+
+def create_image(config, instance_name, image_name, wait):
+    """Create an AMI image from an instance
+
+    Args:
+        config (aws_ml_helper.config.Config): Configuration
+        instance_name (str): Name of the instance from which the image should
+            be created.
+        image_name (str): Name of the newly created image.
+        wait (bool): Should we wait for image to become available
+    """
+    instance = get_instnace(config, instance_name)
+    image = instance.create_image(Name=image_name)
+    click.echo(f'Image ID: {image.id}')
+    if wait:
+        while image.state != 'available':
+            time.sleep(0.5)
+            image.reload()

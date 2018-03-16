@@ -39,7 +39,7 @@ def format_row(row, cols, style):
 
 def hbar(cols, type, style):
     """Creates a horizontal line.
-    
+
     Args:
         cols: Columns specification
         type: top|header|bottom

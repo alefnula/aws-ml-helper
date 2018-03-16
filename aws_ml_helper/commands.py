@@ -164,7 +164,14 @@ def cp(ctx, source, destination):
     cp(ctx.obj['config'], source, destination)
 
 
-
+@cli.command('create-image')
+@click.argument('instance-name', required=True)
+@click.argument('image-name', required=True)
+@click.option('--wait', is_flag=True, help='Wait for AMI to become available')
+@click.pass_context
+def create_image(ctx, instance_name, image_name, wait):
+    from aws_ml_helper.instance import create_image
+    create_image(ctx.obj['config'], instance_name, image_name, wait)
 
 
 # Configuration commands
