@@ -54,25 +54,34 @@ def setup_vpc(ctx, name, network_range, allowed_ip, key_dir):
 
 # Spot instance
 
-@cli.command('spot-run')
+@cli.command('spot-start')
 @click.option('--name', required=True, help='Instance name')
 @click.option('--price', type=float, required=True,
               help='Bidding price for the instance')
+@click.option('--ami',
+              help='AMI id. If not provided use from configuration')
+@click.option('--instance-type',
+              help='Instance type. If not provided use from configuration.')
 @click.pass_context
-def spot_run(ctx, name, price):
+def spot_start(ctx, name, price, ami=None, instance_type=None):
     """Starts a spot instance."""
     from aws_ml_helper.spot import start_spot_instance
-    start_spot_instance(ctx.obj['config'], name, price)
+    start_spot_instance(ctx.obj['config'], name, price, ami, instance_type)
 
 
 @cli.command('spot-price')
 @click.option('--days', type=int, default=7,
-              help='Show information for the last n days')
+              help='Show information for the last n days. Default: 7')
+@click.option('--instance-type',
+              help='Choose instance type. Default: from configuration')
+@click.option('--value', default='all',
+              type=click.Choice(['all', 'min', 'max', 'mean', 'median']),
+              help='Pick the value you want to see. Default: all')
 @click.pass_context
-def spot_price(ctx, days=7):
+def spot_price(ctx, days=7, instance_type=None, value='all'):
     """Show information about spot instance prices."""
     from aws_ml_helper.spot import spot_price
-    spot_price(ctx.obj['config'], days)
+    spot_price(ctx.obj['config'], days, instance_type, value)
 
 
 # Instance commands
@@ -87,9 +96,33 @@ def instances(ctx):
 
 @cli.command()
 @click.argument('name', required=True)
+@click.option('--ami',
+              help='AMI id. If not provided use from configuration')
+@click.option('--instance-type',
+              help='Instance type. If not provided use from configuration.')
+@click.option('--ebs-size', type=int, default=128,
+              help='Size of the EBS Volume in GB')
+@click.pass_context
+def start(ctx, name, ami, instance_type, ebs_size):
+    """Starts an instance."""
+    from aws_ml_helper.instance import start
+    start(ctx.obj['config'], name, ami, instance_type, ebs_size)
+
+
+@cli.command()
+@click.argument('name', required=True)
+@click.pass_context
+def stop(ctx, name):
+    """Stop an instance."""
+    from aws_ml_helper.instance import stop
+    stop(ctx.obj['config'], name)
+
+
+@cli.command()
+@click.argument('name', required=True)
 @click.pass_context
 def terminate(ctx, name):
-    """Terminate instance."""
+    """Terminate an instance."""
     from aws_ml_helper.instance import terminate
     terminate(ctx.obj['config'], name)
 
@@ -111,6 +144,27 @@ def run(ctx, name, command):
     """Run command on a selected instance."""
     from aws_ml_helper.instance import run
     run(ctx.obj['config'], name, command)
+
+
+@cli.command()
+@click.argument('source', required=True)
+@click.argument('destination', required=True)
+@click.pass_context
+def cp(ctx, source, destination):
+    """Copy file to instance or from instance.
+
+    To copy a file to instance use the following command::
+
+        aml cp /path/to/local/file {instance_name}:/remote/path
+
+    And to copy from an instance use::
+        aml cp {instance_name}:/remote/path /local/path
+    """
+    from aws_ml_helper.instance import cp
+    cp(ctx.obj['config'], source, destination)
+
+
+
 
 
 # Configuration commands
