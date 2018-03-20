@@ -14,8 +14,8 @@ class ConfigError(Exception):
 
 class Config(object):
     KEYS = [
-        'aws_access_key_id', 'aws_secret_access_key', 'region',
-        'availability_zone', 'vpc_name', 'vpc_id', 'subnet_id',
+        'account', 'aws_access_key_id', 'aws_secret_access_key',
+        'region', 'availability_zone', 'vpc_name', 'vpc_id', 'subnet_id',
         'ec2_security_group_id', 'efs_security_group_id', 'access_key',
         'efs_id', 'ami_id', 'ami_username', 'instance_type'
     ]
@@ -36,6 +36,7 @@ class Config(object):
             cp.read(config)
             data = cp[profile]
 
+        self.account = data.get('account')
         self.aws_access_key_id = data.get('aws_access_key_id', '')
         self.aws_secret_access_key = data.get('aws_secret_access_key', '')
         self.region = data.get('region', '')
@@ -57,6 +58,7 @@ class Config(object):
     __repr__ = __str__
 
     def configure(self):
+        self.account = click.prompt('AWS Account ID')
         self.aws_access_key_id = click.prompt('AWS Access Key ID')
         self.aws_secret_access_key = click.prompt('AWS Secret Access Key')
         self.region = click.prompt('Select Region Name')
@@ -81,6 +83,7 @@ class Config(object):
             cp.read(self.config)
         if self.profile not in cp.sections():
             cp.add_section(self.profile)
+        cp[self.profile]['account'] = self.account
         cp[self.profile]['aws_access_key_id'] = self.aws_access_key_id
         cp[self.profile]['aws_secret_access_key'] = self.aws_secret_access_key
         cp[self.profile]['region'] = self.region

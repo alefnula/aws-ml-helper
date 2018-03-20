@@ -3,7 +3,6 @@ __date__ = '20 October 2010'
 __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 
 import os
-import time
 import click
 import paramiko
 from aws_ml_helper import boto
@@ -217,23 +216,41 @@ def cp(config, source, destination):
             else:
                 sftp.put(source, destination)
     else:
-        click.secho('Both paths are local paths', fg='red')
+        click.secho('Both paths are local paths.', fg='red')
 
 
-def create_image(config, instance_name, image_name, wait):
-    """Create an AMI image from an instance
+def mount(config, remote, local):
+    """Mount a remote folder using sshfs
+
+    Usage::
+
+        aml mount {instance}:/remote/path /local/path
 
     Args:
         config (aws_ml_helper.config.Config): Configuration
-        instance_name (str): Name of the instance from which the image should
-            be created.
-        image_name (str): Name of the newly created image.
-        wait (bool): Should we wait for image to become available
+        remote (str): Remote path in format `{instance}:{path}`
+        local (str): Local path
     """
+    if os.system('which sshfs >> /dev/null') != 0:
+        click.secho('sshfs must be installed.', fg='red')
+    if not os.path.isdir(local):
+        os.makedirs(local)
+
+    instance_name, _, path = remote.partition(':')
     instance = get_instnace(config, instance_name)
-    image = instance.create_image(Name=image_name)
-    click.echo(f'Image ID: {image.id}')
-    if wait:
-        while image.state != 'available':
-            time.sleep(0.5)
-            image.reload()
+    os.system(
+        f'sshfs "{config.ami_username}@{instance.public_ip_address}:{path}" '
+        f'"{local}" -o IdentityFile="{config.access_key}"'
+    )
+
+
+def umount(local, delete=False):
+    """Unmount a local folder
+
+    Args:
+        local (str): Path to the local folder.
+        delete (bool): Delete local folder after unmount
+    """
+    os.system(f'umount {local}')
+    if delete:
+        os.rmdir(local)

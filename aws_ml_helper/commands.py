@@ -4,13 +4,14 @@ __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 
 import os
 import click
+import webbrowser
 from aws_ml_helper.config import Config, ConfigError
 
 
 @click.group()
-@click.option('--config', type=click.Path(exists=True),
+@click.option('--config', type=click.Path(exists=True), envvar='AML_CONFIG',
               help='Path to the alternative configuration file.')
-@click.option('--profile', default='default',
+@click.option('--profile', default='default', envvar='AML_PROFILE',
               help='Configuration file profile.')
 @click.pass_context
 def cli(ctx, config, profile):
@@ -89,7 +90,7 @@ def spot_price(ctx, days=7, instance_type=None, value='all'):
 @cli.command()
 @click.pass_context
 def instances(ctx):
-    """List all instances and their states."""
+    """List instances."""
     from aws_ml_helper.instance import instances
     instances(ctx.obj['config'])
 
@@ -164,14 +165,53 @@ def cp(ctx, source, destination):
     cp(ctx.obj['config'], source, destination)
 
 
-@cli.command('create-image')
+@cli.command()
+@click.argument('remote', required=True)
+@click.argument('local', required=True, type=click.Path(resolve_path=True))
+@click.pass_context
+def mount(ctx, remote, local):
+    """Mount a remote folder using sshfs.
+
+    `remote` is a remote path in format {instance}:{remote_path} and `local` is
+    a path to the local folder.
+
+    Usage::
+
+        aml mount {instance}:/remote/path /local/path
+    """
+    from aws_ml_helper.instance import mount
+    mount(ctx.obj['config'], remote, local)
+
+
+@cli.command()
+@click.argument('local', required=True,
+                type=click.Path(exists=True, dir_okay=True, resolve_path=True))
+@click.option('--delete', is_flag=True, default=False,
+              help='Delete folder after unmounting')
+def umount(local, delete):
+    """Unmount a local folder"""
+    from aws_ml_helper.instance import umount
+    umount(local, delete)
+
+
+# Image commands
+
+@cli.command()
+@click.pass_context
+def images(ctx):
+    """List AMI images."""
+    from aws_ml_helper.image import images
+    images(ctx.obj['config'])
+
+
+@cli.command('image-create')
 @click.argument('instance-name', required=True)
 @click.argument('image-name', required=True)
 @click.option('--wait', is_flag=True, help='Wait for AMI to become available')
 @click.pass_context
-def create_image(ctx, instance_name, image_name, wait):
-    from aws_ml_helper.instance import create_image
-    create_image(ctx.obj['config'], instance_name, image_name, wait)
+def image_create(ctx, instance_name, image_name, wait):
+    from aws_ml_helper.image import image_create
+    image_create(ctx.obj['config'], instance_name, image_name, wait)
 
 
 # Configuration commands
@@ -185,6 +225,7 @@ def config(ctx):
 
     \b
         $ aml config
+        AWS Account ID: 503........7
         AWS Access Key ID: AKI................C
         AWS Secret Access Key: Jgd....................................Y
         Select Region Name: us-east-1
@@ -244,7 +285,7 @@ def config_set(ctx, key, value):
         click.secho(str(e), fg='red')
 
 
-# Shell
+# Shell & Console
 
 @cli.command()
 @click.pass_context
@@ -261,3 +302,11 @@ def shell(ctx):
         embed(user_ns=user_ns)
     except ImportError:
         click.secho('IPython is not installed', fg='red')
+
+
+@cli.command()
+@click.pass_context
+def console(ctx):
+    """Open amazon web console"""
+    account = ctx.obj['config'].account
+    webbrowser.open_new_tab(f'https://{account}.signin.aws.amazon.com/console')
