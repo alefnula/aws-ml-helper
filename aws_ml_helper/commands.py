@@ -56,18 +56,21 @@ def setup_vpc(ctx, name, network_range, allowed_ip, key_dir):
 # Spot instance
 
 @cli.command('spot-start')
-@click.option('--name', required=True, help='Instance name')
+@click.argument('name', required=True)
 @click.option('--price', type=float, required=True,
               help='Bidding price for the instance')
 @click.option('--ami',
               help='AMI id. If not provided use from configuration')
 @click.option('--instance-type',
               help='Instance type. If not provided use from configuration.')
+@click.option('--volume', help='Name of the volume you want to attach')
+@click.option('--mount-point', help='Where the volume should be mounted')
 @click.pass_context
-def spot_start(ctx, name, price, ami=None, instance_type=None):
+def spot_start(ctx, name, price, ami, instance_type, volume, mount_point):
     """Starts a spot instance."""
     from aws_ml_helper.spot import start_spot_instance
-    start_spot_instance(ctx.obj['config'], name, price, ami, instance_type)
+    start_spot_instance(ctx.obj['config'], name, price, ami, instance_type,
+                        volume, mount_point)
 
 
 @cli.command('spot-price')
@@ -90,7 +93,7 @@ def spot_price(ctx, days=7, instance_type=None, value='all'):
 @cli.command()
 @click.pass_context
 def instances(ctx):
-    """List instances."""
+    """Lists instances."""
     from aws_ml_helper.instance import instances
     instances(ctx.obj['config'])
 
@@ -114,7 +117,7 @@ def start(ctx, name, ami, instance_type, ebs_size):
 @click.argument('name', required=True)
 @click.pass_context
 def stop(ctx, name):
-    """Stop an instance."""
+    """Stops an instance."""
     from aws_ml_helper.instance import stop
     stop(ctx.obj['config'], name)
 
@@ -142,7 +145,7 @@ def login(ctx, name):
 @click.argument('command', required=True)
 @click.pass_context
 def run(ctx, name, command):
-    """Run command on a selected instance."""
+    """Runs a command on a selected instance."""
     from aws_ml_helper.instance import run
     run(ctx.obj['config'], name, command)
 
@@ -210,8 +213,74 @@ def images(ctx):
 @click.option('--wait', is_flag=True, help='Wait for AMI to become available')
 @click.pass_context
 def image_create(ctx, instance_name, image_name, wait):
+    """"Create an image from an instance."""
     from aws_ml_helper.image import image_create
     image_create(ctx.obj['config'], instance_name, image_name, wait)
+
+
+@cli.command('image-delete')
+@click.argument('image-name', required=True)
+@click.pass_context
+def image_delete(ctx, image_name):
+    """Deletes an AMI image."""
+    from aws_ml_helper.image import image_delete
+    image_delete(config, image_name)
+
+
+# Volume commands
+
+@cli.command()
+@click.pass_context
+def volumes(ctx):
+    """List all volumes"""
+    from aws_ml_helper.volume import volumes
+    volumes(ctx.obj['config'])
+
+
+@cli.command('volume-create')
+@click.argument('volume-name', required=True)
+@click.option('--size', type=int, default=256, help='Size of the volume in GB')
+@click.option('--default', is_flag=True, default=False,
+              help='Set as default volume in configuration')
+@click.option('--mount-point',
+              help='Set in configuration where this volume should be mounted')
+@click.pass_context
+def volume_create(ctx, volume_name, size, default, mount_point):
+    """Create a volume"""
+    from aws_ml_helper.volume import volume_create
+    volume_create(ctx.obj['config'], volume_name, size, default, mount_point)
+
+
+@cli.command('volume-attach')
+@click.argument('volume-name', required=True)
+@click.argument('instance-name', required=True)
+@click.option('--device', default='xvdh', help='The device name')
+@click.pass_context
+def volume_attach(ctx, volume_name, instance_name, device):
+    """Attach a volume to instance."""
+    from aws_ml_helper.volume import volume_attach
+    volume_attach(ctx.obj['config'], volume_name, instance_name, device)
+
+
+@cli.command('volume-detach')
+@click.argument('volume-name', required=True)
+@click.argument('instance-name', required=True)
+@click.option('--device', default='xvdh', help='The device name')
+@click.pass_context
+def volume_detach(ctx, volume_name, instance_name, device):
+    """Detach a volume from an instance."""
+    from aws_ml_helper.volume import volume_detach
+    volume_detach(ctx.obj['config'], volume_name, instance_name, device)
+
+
+@cli.command('volume-delete')
+@click.argument('volume-name', required=True)
+@click.pass_context
+def volume_delete(ctx, volume_name):
+    """Delete a volume.
+    """
+    from aws_ml_helper.volume import volume_delete
+    volume_delete(ctx.obj['config'], volume_name)
 
 
 # Configuration commands
@@ -307,6 +376,6 @@ def shell(ctx):
 @cli.command()
 @click.pass_context
 def console(ctx):
-    """Open amazon web console"""
+    """Open amazon web console."""
     account = ctx.obj['config'].account
     webbrowser.open_new_tab(f'https://{account}.signin.aws.amazon.com/console')

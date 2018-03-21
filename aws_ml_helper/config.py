@@ -17,7 +17,8 @@ class Config(object):
         'account', 'aws_access_key_id', 'aws_secret_access_key',
         'region', 'availability_zone', 'vpc_name', 'vpc_id', 'subnet_id',
         'ec2_security_group_id', 'efs_security_group_id', 'access_key',
-        'efs_id', 'ami_id', 'ami_username', 'instance_type'
+        'efs_id', 'ami_id', 'ami_username', 'instance_type', 'ebs_volume',
+        'mount_point'
     ]
 
     def __init__(self, config, profile):
@@ -51,6 +52,8 @@ class Config(object):
         self.ami_id = data.get('ami_id', '')
         self.ami_username = data.get('ami_username')
         self.instance_type = data.get('instance_type', '')
+        self.ebs_volume = data.get('ebs_volume', '')
+        self.mount_point = data.get('mount_point', '')
 
     def __str__(self):
         return f'Config({self.config}, {self.profile})'
@@ -98,6 +101,8 @@ class Config(object):
         cp[self.profile]['ami_id'] = self.ami_id
         cp[self.profile]['ami_username'] = self.ami_username
         cp[self.profile]['instance_type'] = self.instance_type
+        cp[self.profile]['ebs_volume'] = self.ebs_volume
+        cp[self.profile]['mount_point'] = self.mount_point
         if not os.path.isdir(os.path.dirname(self.config)):
             os.makedirs(os.path.dirname(self.config))
         with io.open(self.config, 'w') as f:

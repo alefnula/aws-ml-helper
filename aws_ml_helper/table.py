@@ -64,12 +64,16 @@ def table(data, headers=None, style='psql'):
     Args:
         data (list of list): Table data. Outer list contains rows.
         headers (list of str): Column headers
+        style (str): Table style
 
     Returns:
         str: Formatted data as a string
     """
     if len(data) == 0:
         return ''
+
+    # Convert all elements to strings
+    data = [[str(col) for col in row] for row in data]
 
     if headers:
         ncols = len(headers)

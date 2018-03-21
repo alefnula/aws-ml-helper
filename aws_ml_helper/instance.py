@@ -7,6 +7,7 @@ import click
 import paramiko
 from aws_ml_helper import boto
 from aws_ml_helper.table import table
+from aws_ml_helper.utils import name_from_tags
 
 
 def instances(config):
@@ -19,19 +20,21 @@ def instances(config):
     data = []
     for i in ec2.instances.all():
         data.append([
-            [tag['Value'] for tag in i.tags if tag['Key'] == 'Name'][0],
+            name_from_tags(i.tags),
+            i.id,
             i.state['Name'],
             i.public_ip_address or 'no ip'
         ])
 
-    print(table(data, ['name', 'state', 'public ip']))
+    print(table(data, ['name', 'id', 'state', 'public ip']))
 
 
-def get_instnace(config, name):
+def get_instance(config, name):
     """Returns an instance object with selected name or returns `None` if the
     instance is not found.
 
     Args:
+        config (aws_ml_helper.config.Config): Configuration
         name (str): Instance name
 
     Returns:
@@ -67,7 +70,7 @@ def start(config, name, ami_id, instance_type, ebs_size=128):
         ebs_size (int): Size of the EBS Volume in GB
     """
     ec2 = boto.resource('ec2', config)
-    instance = get_instnace(config, name)
+    instance = get_instance(config, name)
 
     if instance is None:
         # Create an instance
@@ -123,7 +126,7 @@ def stop(config, name):
         config (aws_ml_helper.config.Config): Configuration
         name (str): Name of the instance
     """
-    instance = get_instnace(config, name)
+    instance = get_instance(config, name)
     if instance is not None:
         instance.stop()
 
@@ -135,7 +138,7 @@ def terminate(config, name):
         config (aws_ml_helper.config.Config): Configuration
         name (str): Name of the instance
     """
-    instance = get_instnace(config, name)
+    instance = get_instance(config, name)
     if instance is not None:
         instance.terminate()
 
@@ -147,7 +150,7 @@ def login(config, name):
         config (aws_ml_helper.config.Config): Configuration
         name (str): Name of the instance to log in
     """
-    instance = get_instnace(config, name)
+    instance = get_instance(config, name)
     if instance is not None:
         os.system(
             f'ssh -o "StrictHostKeyChecking no" -i "{config.access_key}" '
@@ -163,7 +166,7 @@ def run(config, name, command):
         name (str): Name of the instance
         command (str): Command to run
     """
-    instance = get_instnace(config, name)
+    instance = get_instance(config, name)
     if instance is not None:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -203,7 +206,7 @@ def cp(config, source, destination):
             instance_name, destination = destination.split(':')
             from_instance = False
 
-        instance = get_instnace(config, instance_name)
+        instance = get_instance(config, instance_name)
         if instance is not None:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -237,7 +240,7 @@ def mount(config, remote, local):
         os.makedirs(local)
 
     instance_name, _, path = remote.partition(':')
-    instance = get_instnace(config, instance_name)
+    instance = get_instance(config, instance_name)
     os.system(
         f'sshfs "{config.ami_username}@{instance.public_ip_address}:{path}" '
         f'"{local}" -o IdentityFile="{config.access_key}"'

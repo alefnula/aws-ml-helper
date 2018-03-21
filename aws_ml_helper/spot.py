@@ -4,10 +4,12 @@ __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 
 from aws_ml_helper import boto
 from datetime import datetime, timedelta
+from aws_ml_helper.volume import volume_attach
+from aws_ml_helper.instance import run
 
 
 def start_spot_instance(config, name, bid_price, ami_id=None,
-                        instance_type=None):
+                        instance_type=None, volume=None, mount_point=None):
     """Starts a spot instance.
 
     Args:
@@ -18,6 +20,8 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
             configuration will be used
         instance_type (str): Instance type to use. If not provided, value from
             the configuration will be used.
+        volume (str): EBS Volume to attach to the instance
+        mount_point (str): Path where the volume should be attached
     """
     ec2 = boto.client('ec2', config)
     response = ec2.request_spot_instances(
@@ -75,6 +79,13 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
         response['Reservations'][0]['Instances'][0]['PublicIpAddress']
     )
     print(f'Spot Instance IP: {instance_ip}')
+
+    volume = volume or config.ebs_volume
+    mount_point = mount_point or config.mount_point
+
+    if volume not in ('', None) and mount_point not in ('', None):
+        volume_attach(config, volume, name, device='xvdh')
+        run(config, name, f'sudo mount /dev/xvdh {mount_point}')
 
 
 def median(l):

@@ -6,7 +6,32 @@ import time
 import click
 from aws_ml_helper import boto
 from aws_ml_helper.table import table
-from aws_ml_helper.instance import get_instnace
+from aws_ml_helper.instance import get_instance
+
+
+def get_image(config, name):
+    """Returns an image object with selected name or returns `None` if the
+        image is not found.
+
+        Args:
+            config (aws_ml_helper.config.Config): Configuration
+            name (str): Volume name
+
+        Returns:
+            Volume if found or None
+        """
+    ec2 = boto.resource('ec2', config)
+    image_list = ec2.images.filter(
+        Owners=[config.account],
+        Filters=[{'Name': 'Name', 'Values': [name]}]
+    )
+    if len(image_list) == 0:
+        click.secho(f'Volume "{name}" not found')
+        return None
+    elif len(image_list) > 1:
+        click.secho(f'Multiple volumes with name "{name}" found.')
+        return None
+    return image_list[0]
 
 
 def images(config):
@@ -37,10 +62,22 @@ def image_create(config, instance_name, image_name, wait):
         image_name (str): Name of the newly created image.
         wait (bool): Should we wait for image to become available
     """
-    instance = get_instnace(config, instance_name)
+    instance = get_instance(config, instance_name)
     image = instance.create_image(Name=image_name)
     click.echo(f'Image ID: {image.id}')
     if wait:
         while image.state != 'available':
             time.sleep(0.5)
             image.reload()
+
+
+def image_delete(config, image_name):
+    """Deletes an image.
+
+    Args:
+        config (aws_ml_helper.config.Config): Configuration
+        image_name (str): Image name
+    """
+    image = get_image(config, image_name)
+    if image:
+        image.deregister()
