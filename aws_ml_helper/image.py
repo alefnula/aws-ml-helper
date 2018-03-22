@@ -4,8 +4,8 @@ __copyright__ = 'Copyright (c)  2018 Viktor Kerkez'
 
 import time
 import click
+from tabulate import tabulate
 from aws_ml_helper import boto
-from aws_ml_helper.table import table
 from aws_ml_helper.instance import get_instance
 
 
@@ -49,7 +49,7 @@ def images(config):
             i.state,
         ])
 
-    print(table(data, ['name', 'id', 'state']))
+    print(tabulate(data, ['name', 'id', 'state'], 'fancy_grid'))
 
 
 def image_create(config, instance_name, image_name, wait):

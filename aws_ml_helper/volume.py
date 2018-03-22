@@ -2,9 +2,10 @@ __author__ = 'Viktor Kerkez <alefnula@gmail.com>'
 __date__ = '21 March 2018'
 __copyright__ = 'Copyright (c)  2018 Viktor Kerkez'
 
+import time
 import click
+from tabulate import tabulate
 from aws_ml_helper import boto
-from aws_ml_helper.table import table
 from aws_ml_helper.utils import name_from_tags
 from aws_ml_helper.instance import get_instance
 
@@ -41,45 +42,49 @@ def volumes(config):
     """
     ec2 = boto.resource('ec2', config)
     data = []
-    for i in ec2.volumes.all():
+    for v in ec2.volumes.all():
         data.append([
-            name_from_tags(i.tags),
-            i.id,
-            i.size,
-            i.state,
-            ', '.join([a['InstanceId'] for a in i.attachments])
+            name_from_tags(v.tags),
+            v.id,
+            v.size,
+            v.state,
+            ', '.join([a['InstanceId'] for a in v.attachments])
         ])
 
-    print(table(data, ['name', 'id', 'size', 'state', 'attachments']))
+    print(tabulate(
+        data, ['name', 'id', 'size', 'state', 'attachments'], 'fancy_grid'
+    ))
 
 
-def volume_create(config, name, size=256, default=False, mount_point=None):
+def volume_create(config, name, size=256, snapshot_name=None, wait=False):
     """Create an EBS volume.
 
     Args:
         config (aws_ml_helper.config.Config): Configuration
         name (str): Name of the volume
         size (int): Volume size
-        default (bool): Is this a default image that should be written in the
-            configuration and attached to every spot instance.
-        mount_point (str): If this is a default volume, where to mount it on
-            the instance.
+        snapshot_name (str): Name of the snapshot from which the volume should
+            be created
+        wait (bool): Wait for the volume to become `available`
     """
     ec2 = boto.resource('ec2', config)
-    ec2.create_volume(
+    from aws_ml_helper.snapshot import get_snapshot
+    snapshot = get_snapshot(config, snapshot_name)
+    snapshot_id = (snapshot and snapshot.id) or None
+    volume = ec2.create_volume(
         AvailabilityZone=config.availability_zone,
         Size=size,
+        SnapshotId=snapshot_id,
         VolumeType='gp2',
         TagSpecifications=[{
             'ResourceType': 'volume',
             'Tags': [{'Key': 'Name', 'Value': name}]
         }]
     )
-    if default:
-        config.ebs_volume = name
-        if mount_point:
-            config.mount_point = mount_point
-        config.save()
+    if wait:
+        while volume.state != 'available':
+            time.sleep(1)
+            volume.reload()
 
 
 def volume_attach(config, volume_name, instance_name, device='xvdh'):

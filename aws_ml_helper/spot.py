@@ -2,14 +2,19 @@ __author__ = 'Viktor Kerkez <alefnula@gmail.com>'
 __date__ = '20 October 2010'
 __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 
+import click
+from tabulate import tabulate
 from aws_ml_helper import boto
 from datetime import datetime, timedelta
-from aws_ml_helper.volume import volume_attach
 from aws_ml_helper.instance import run
+from aws_ml_helper.utils import name_from_tags
+from aws_ml_helper.snapshot import get_snapshot
+from aws_ml_helper.volume import volume_attach, get_volume, volume_create
 
 
 def start_spot_instance(config, name, bid_price, ami_id=None,
-                        instance_type=None, volume=None, mount_point=None):
+                        instance_type=None, snapshot_name=None,
+                        mount_point=None):
     """Starts a spot instance.
 
     Args:
@@ -20,8 +25,9 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
             configuration will be used
         instance_type (str): Instance type to use. If not provided, value from
             the configuration will be used.
-        volume (str): EBS Volume to attach to the instance
-        mount_point (str): Path where the volume should be attached
+        snapshot_name (str): Name of the snapshot from which the attached
+            volume will be created
+        mount_point (str): Path where the volume should be mounted
     """
     ec2 = boto.client('ec2', config)
     response = ec2.request_spot_instances(
@@ -59,6 +65,7 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
         SpotPrice=f'{bid_price}',
         InstanceInterruptionBehavior='terminate'
     )
+    click.echo('Spot instance request created.')
     request_id = response['SpotInstanceRequests'][0]['SpotInstanceRequestId']
     waiter = ec2.get_waiter('spot_instance_request_fulfilled')
     waiter.wait(SpotInstanceRequestIds=[request_id])
@@ -68,7 +75,7 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
     instance_id = response['SpotInstanceRequests'][0]['InstanceId']
     waiter = ec2.get_waiter('instance_running')
     waiter.wait(InstanceIds=[instance_id])
-    print(f'Spot Instance ID: {instance_id}')
+    click.echo(f'Spot Instance ID: {instance_id}')
     ec2.create_tags(Resources=[instance_id],
                     Tags=[{'Key': 'Name', 'Value': name}])
     response = ec2.describe_instances(
@@ -78,13 +85,35 @@ def start_spot_instance(config, name, bid_price, ami_id=None,
     instance_ip = (
         response['Reservations'][0]['Instances'][0]['PublicIpAddress']
     )
-    print(f'Spot Instance IP: {instance_ip}')
+    click.echo(f'Spot Instance IP: {instance_ip}')
 
-    volume = volume or config.ebs_volume
     mount_point = mount_point or config.mount_point
+    if mount_point in ('', None):
+        # Mount point is not defined we don't know where to mount the volume
+        return
 
-    if volume not in ('', None) and mount_point not in ('', None):
-        volume_attach(config, volume, name, device='xvdh')
+    ec2 = boto.resource('ec2', config)
+    # Search for a volume with the same name
+    volume = get_volume(config, name)
+    if volume is not None:
+        click.echo(f'Volume "{name}" found - attaching')
+        # Attach the volume
+        volume_attach(config, name, name, device='xvdh')
+        run(config, name, f'sudo mount /dev/xvdh {mount_point}')
+    else:
+        if snapshot_name is not None:
+            snapshot = get_snapshot(config, snapshot_name)
+        elif config.snapshot_id not in ('', None):
+            snapshot = ec2.Snapshot(config.snapshot_id)
+            snapshot_name = name_from_tags(snapshot.tags)
+        else:
+            # Snapshot not found return
+            return
+        click.echo(f'Creating volume "{name}" from snapshot "{snapshot_name}"')
+        volume_create(config, name, size=snapshot.volume_size,
+                      snapshot_name=snapshot_name, wait=True)
+        click.echo(f'Attaching volume "{name}"')
+        volume_attach(config, name, name, device='xvdh')
         run(config, name, f'sudo mount /dev/xvdh {mount_point}')
 
 
@@ -128,10 +157,12 @@ def spot_price(config, days=7, instance_type=None, value='all'):
     prices = [float(p['SpotPrice']) for p in r['SpotPriceHistory']]
 
     if value == 'all':
-        print(f'Min:    ${min(prices)}')
-        print(f'Max:    ${max(prices)}')
-        print(f'Mean:   ${sum(prices) / len(prices)}')
-        print(f'Median: ${median(prices)}')
+        print(tabulate([
+            ['Min', min(prices)],
+            ['Max', max(prices)],
+            ['Mean', sum(prices) / len(prices)],
+            ['Median', median(prices)]
+        ], tablefmt='fancy_grid', floatfmt='.3f'))
     elif value == 'min':
         print(min(prices))
     elif value == 'max':

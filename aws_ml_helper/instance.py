@@ -5,8 +5,8 @@ __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 import os
 import click
 import paramiko
+from tabulate import tabulate
 from aws_ml_helper import boto
-from aws_ml_helper.table import table
 from aws_ml_helper.utils import name_from_tags
 
 
@@ -26,7 +26,7 @@ def instances(config):
             i.public_ip_address or 'no ip'
         ])
 
-    print(table(data, ['name', 'id', 'state', 'public ip']))
+    print(tabulate(data, ['name', 'id', 'state', 'public ip'], 'fancy_grid'))
 
 
 def get_instance(config, name):

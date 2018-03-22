@@ -63,14 +63,16 @@ def setup_vpc(ctx, name, network_range, allowed_ip, key_dir):
               help='AMI id. If not provided use from configuration')
 @click.option('--instance-type',
               help='Instance type. If not provided use from configuration.')
-@click.option('--volume', help='Name of the volume you want to attach')
+@click.option('--snapshot',
+              help='Name of the snapshot from which the attached volume will '
+                   'be created')
 @click.option('--mount-point', help='Where the volume should be mounted')
 @click.pass_context
-def spot_start(ctx, name, price, ami, instance_type, volume, mount_point):
+def spot_start(ctx, name, price, ami, instance_type, snapshot, mount_point):
     """Starts a spot instance."""
     from aws_ml_helper.spot import start_spot_instance
     start_spot_instance(ctx.obj['config'], name, price, ami, instance_type,
-                        volume, mount_point)
+                        snapshot, mount_point)
 
 
 @cli.command('spot-price')
@@ -240,15 +242,16 @@ def volumes(ctx):
 @cli.command('volume-create')
 @click.argument('volume-name', required=True)
 @click.option('--size', type=int, default=256, help='Size of the volume in GB')
-@click.option('--default', is_flag=True, default=False,
-              help='Set as default volume in configuration')
-@click.option('--mount-point',
-              help='Set in configuration where this volume should be mounted')
+@click.option('--snapshot-name',
+              help='Name of the snapshot from which the volume should be '
+                   'created')
+@click.option('--wait', is_flag=True, default=False,
+              help='Wait for the volume to become available')
 @click.pass_context
-def volume_create(ctx, volume_name, size, default, mount_point):
+def volume_create(ctx, volume_name, size, snapshot_name, wait):
     """Create a volume"""
     from aws_ml_helper.volume import volume_create
-    volume_create(ctx.obj['config'], volume_name, size, default, mount_point)
+    volume_create(ctx.obj['config'], volume_name, size, snapshot_name, wait)
 
 
 @cli.command('volume-attach')
@@ -277,10 +280,35 @@ def volume_detach(ctx, volume_name, instance_name, device):
 @click.argument('volume-name', required=True)
 @click.pass_context
 def volume_delete(ctx, volume_name):
-    """Delete a volume.
-    """
+    """Delete a volume."""
     from aws_ml_helper.volume import volume_delete
     volume_delete(ctx.obj['config'], volume_name)
+
+
+# Snapshot commands
+
+@cli.command()
+@click.pass_context
+def snapshots(ctx):
+    """List all snapshots"""
+    from aws_ml_helper.snapshot import snapshots
+    snapshots(ctx.obj['config'])
+
+
+@cli.command('snapshot-create')
+@click.argument('volume-name', required=True)
+@click.argument('snapshot-name', required=True)
+@click.option('--default', is_flag=True, default=False,
+              help='Is this a default snapshot that should be saved in config')
+@click.option('--wait', is_flag=True, default=False,
+              help='Wait for snapshot creation to complete')
+@click.pass_context
+def snapshot_create(ctx, volume_name, snapshot_name, default, wait):
+    """Create a snapshot from a volume."""
+    from aws_ml_helper.snapshot import snapshot_create
+    snapshot_create(
+        ctx.obj['config'], volume_name, snapshot_name, default, wait
+    )
 
 
 # Configuration commands
