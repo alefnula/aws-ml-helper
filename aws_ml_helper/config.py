@@ -18,7 +18,7 @@ class Config(object):
         'region', 'availability_zone', 'vpc_name', 'vpc_id', 'subnet_id',
         'ec2_security_group_id', 'efs_security_group_id', 'access_key',
         'efs_id', 'ami_id', 'ami_username', 'instance_type', 'mount_point',
-        'snapshot_id'
+        'snapshot_id', 'table_format'
     ]
 
     def __init__(self, config, profile):
@@ -54,6 +54,7 @@ class Config(object):
         self.instance_type = data.get('instance_type', '')
         self.mount_point = data.get('mount_point', '')
         self.snapshot_id = data.get('snapshot_id', '')
+        self.table_format = data.get('table_format', 'fancy_grid')
 
     def __str__(self):
         return f'Config({self.config}, {self.profile})'
@@ -103,6 +104,7 @@ class Config(object):
         cp[self.profile]['instance_type'] = self.instance_type
         cp[self.profile]['mount_point'] = self.mount_point
         cp[self.profile]['snapshot_id'] = self.snapshot_id
+        cp[self.profile]['table_format'] = self.table_format
         if not os.path.isdir(os.path.dirname(self.config)):
             os.makedirs(os.path.dirname(self.config))
         with io.open(self.config, 'w') as f:

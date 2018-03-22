@@ -52,7 +52,8 @@ def volumes(config):
         ])
 
     print(tabulate(
-        data, ['name', 'id', 'size', 'state', 'attachments'], 'fancy_grid'
+        data, ['name', 'id', 'size', 'state', 'attachments'],
+        config.table_format
     ))
 
 

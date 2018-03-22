@@ -162,7 +162,7 @@ def spot_price(config, days=7, instance_type=None, value='all'):
             ['Max', max(prices)],
             ['Mean', sum(prices) / len(prices)],
             ['Median', median(prices)]
-        ], tablefmt='fancy_grid', floatfmt='.3f'))
+        ], tablefmt=config.table_format, floatfmt='.3f'))
     elif value == 'min':
         print(min(prices))
     elif value == 'max':

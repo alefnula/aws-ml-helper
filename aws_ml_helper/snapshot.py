@@ -41,7 +41,8 @@ def snapshots(config):
             i.description
         ])
     print(tabulate(
-        data, ['name', 'id', 'state', 'size', 'description'], 'fancy_grid'
+        data, ['name', 'id', 'state', 'size', 'description'],
+        config.table_format
     ))
 
 

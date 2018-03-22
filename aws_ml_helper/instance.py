@@ -26,7 +26,9 @@ def instances(config):
             i.public_ip_address or 'no ip'
         ])
 
-    print(tabulate(data, ['name', 'id', 'state', 'public ip'], 'fancy_grid'))
+    print(tabulate(
+        data, ['name', 'id', 'state', 'public ip'], config.table_format
+    ))
 
 
 def get_instance(config, name):

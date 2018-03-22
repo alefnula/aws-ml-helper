@@ -49,7 +49,7 @@ def images(config):
             i.state,
         ])
 
-    print(tabulate(data, ['name', 'id', 'state'], 'fancy_grid'))
+    print(tabulate(data, ['name', 'id', 'state'], config.table_format))
 
 
 def image_create(config, instance_name, image_name, wait):
