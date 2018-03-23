@@ -8,6 +8,9 @@ import click
 from configparser import ConfigParser
 
 
+DEFAULT_CONFIG_PATH = '~/.aws-ml-helper/config.ini'
+
+
 class ConfigError(Exception):
     pass
 
@@ -21,20 +24,20 @@ class Config(object):
         'snapshot_id', 'table_format'
     ]
 
-    def __init__(self, config, profile):
+    def __init__(self, config=None, profile='default'):
         """
         Args:
             config (str): Path to the configuration ini file
             profile (str): Profile to use
         """
-        self.config = config
+        self.config = config or os.path.expanduser(DEFAULT_CONFIG_PATH)
         self.profile = profile
 
-        if not os.path.isfile(config):
+        if not os.path.isfile(self.config):
             data = {}
         else:
             cp = ConfigParser()
-            cp.read(config)
+            cp.read(self.config)
             data = cp[profile]
 
         self.account = data.get('account')

@@ -5,7 +5,7 @@ __copyright__ = 'Copyright (c) 2010 Viktor Kerkez'
 import os
 import click
 import webbrowser
-from aws_ml_helper.config import Config, ConfigError
+from aws_ml_helper.config import Config, ConfigError, DEFAULT_CONFIG_PATH
 
 
 @click.group()
@@ -16,7 +16,7 @@ from aws_ml_helper.config import Config, ConfigError
 @click.pass_context
 def cli(ctx, config, profile):
     if config is None:
-        config = os.path.expanduser('~/.aws-ml-helper/config.ini')
+        config = os.path.expanduser(DEFAULT_CONFIG_PATH)
         if not os.path.isfile(config) and ctx.invoked_subcommand != 'config':
             click.echo('aml not configured.')
             click.echo('Before usage run: aml config')

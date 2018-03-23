@@ -160,13 +160,14 @@ def login(config, name):
         )
 
 
-def run(config, name, command):
+def run(config, name, command, silent=False):
     """Run command on the selected instance
 
     Args:
         config (aws_ml_helper.config.Config): Configuration
         name (str): Name of the instance
         command (str): Command to run
+        silent (bool): Should it print out the results or not
     """
     instance = get_instance(config, name)
     if instance is not None:
@@ -177,11 +178,13 @@ def run(config, name, command):
                     key_filename=config.access_key)
         stdin, stdout, stderr = ssh.exec_command(command)
         out = stdout.read().decode('utf-8')
-        if out.strip() != '':
-            click.echo(out)
         err = stderr.read().decode('utf-8')
-        if err.strip() != '':
-            click.secho(err, fg='red')
+        if not silent:
+            if out.strip() != '':
+                click.echo(out)
+            if err.strip() != '':
+                click.secho(err, fg='red')
+        return out, err
 
 
 def cp(config, source, destination):
